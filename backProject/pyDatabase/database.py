@@ -86,7 +86,6 @@ class Database:
         keys=list(kw.keys())
         values=[f'"{x}"' if type(x)==str else f"{x}" for x in kw.values()]
         sql=f"insert into {table} ({','.join(keys)}) values ({','.join(values)});"
-        #print(sql)
         self.connection.execute(sql)
         self.save()
     def filterNum(self,table,orderkey,reverse=False,num=-1,**kw):

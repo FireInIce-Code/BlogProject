@@ -1,9 +1,12 @@
 import json
 import os
 import time
-from fastapi import FastAPI
+from fastapi import FastAPI,Cookie
+from starlette.responses import JSONResponse
 from pyDatabase import database
+import session
 import uvicorn
+
 from pydantic import BaseModel
 
 sortItems = "Python C++ Javascript Algorithm ProgrammingLife".split(" ")
@@ -11,7 +14,7 @@ sortItems = "Python C++ Javascript Algorithm ProgrammingLife".split(" ")
 app = FastAPI()
 BASEDIR = os.path.dirname(__file__)
 db = database.Database(os.path.join(BASEDIR, "db.sqlite3"))
-
+session.init(db)
 
 def datasToArr(blogs):
     datas = []
@@ -28,30 +31,38 @@ def datasToArr(blogs):
 class postNewBlogArg(BaseModel):
     tag: int
     inner: str
-    user: int
     title: str
 
 
 @app.post("/blog/new")
-async def postNewBlogApi(item: postNewBlogArg):
+async def postNewBlogApi(item: postNewBlogArg,sessionId=Cookie(None)):
+    s=session.getSession(sessionId)
+    if s:
+        user=s['userId']
+    else:
+        return {"message":"no signIn"}
     date = time.strftime("%Y-%m-%d")
     currentTime = int(time.time())
-    db.create("blog", tag=item.tag, inner=item.inner, user=item.user,
+    db.create("blog", tag=item.tag, inner=item.inner, user=user,
               date=date, time=currentTime, title=item.title)
     return {"message": "success"}
 
 
 class postNewGoodArg(BaseModel):
-    user: int
     id: int
 
 
 @app.post("/blog/good")
-async def postNewGoodApi(item: postNewGoodArg):
+async def postNewGoodApi(item: postNewGoodArg,sessionId=Cookie(None)):
+    s=session.getSession(sessionId)
+    if s:
+        user=s['userId']
+    else:
+        return {"message":"no signIn"}
     pls = db.filter("pl", id=item.id)
     if len(pls) == 1:
         pl = pls.first()
-        if item.user == pl.userId:
+        if user == pl.userId:
             return {
                 "message": "self"
             }
@@ -61,20 +72,24 @@ async def postNewGoodApi(item: postNewGoodArg):
                 "message": "repeat"
             }
 
-    db.create("good", plId=item.id, userId=item.user)
+    db.create("good", plId=item.id, userId=user)
     return {"message": "success"}
 
 
 class postNewPlArg(BaseModel):
-    user: int
     inner: str
     blog: int
 
 
 @app.post("/blog/pl")
-async def postNewPlApi(item: postNewPlArg):
+async def postNewPlApi(item: postNewPlArg,sessionId=Cookie(None)):
+    s=session.getSession(sessionId)
+    if s:
+        user=s['userId']
+    else:
+        return {"message":"no signIn"}
     date = time.strftime("%Y-%m-%d")
-    db.create("pl", userId=item.user, blogId=item.blog,
+    db.create("pl", userId=user, blogId=item.blog,
               inner=item.inner, date=date)
     return {"message": "success"}
 
@@ -86,48 +101,70 @@ class postSignUpArg(BaseModel):
 
 
 @app.post("/user/signUp")
-async def postSignUpApi(item:postSignUpArg):
+async def postSignUpApi(item:postSignUpArg,sessionId=Cookie(None)):
+    if sessionId and session.getSession(sessionId):
+        return {"message","loginned"}
     if len(db.filter("user",username=item.username))!=0:
         return {"message":"username repeat"}
     db.create("user",username=item.username,nickname=item.nickname,password=item.password)
-    return {"message":"success"}
+    uid=db.get(username=item.username).id
+    sessionId=session.newSessionId()
+    session.setSession(sessionId,{"userId":uid})
+    response=JSONResponse(content={"message":"success"})
+    response.set_cookie(key="sessionId",value=sessionId,max_age=60*60)
+    return response
 
 class postSignInArg(BaseModel):
     username:str
     password:str
 
 @app.post("/user/signIn")
-async def postSignInApi(item:postSignInArg):
+async def postSignInApi(item:postSignInArg,sessionId=Cookie(None)):
+    if sessionId and session.getSession(sessionId):
+        return {"message":"loginned"}
     v_user=db.filter("user",username=item.username)
     if len(v_user)!=1:
         return {"message":"failed"}
     user=v_user.first()
     if user.password==item.password:
-        return {"message":"success"}
+        response=JSONResponse(content={"message":"success"})
+        sessionId=session.newSessionId()
+        response.set_cookie(key="sessionId",value=sessionId,max_age=60*60)
+        session.setSession(sessionId,{"userId":user.id})
+        return response
     else:
         return {"message":"failed"}
 
 class putChangeQmArg(BaseModel):
-    id:int
     qm:str
 
 @app.put("/user/changeQm")
-async def putChangeQmApi(item:putChangeQmArg):
-    user=db.filter("user",id=item.id)
+async def putChangeQmApi(item:putChangeQmArg,sessionId=Cookie(None)):
+    s=session.getSession(sessionId)
+    if s:
+        uid=s['userId']
+    else:
+        return {"message":"no signIn"}
+    user=db.filter("user",id=uid)
     if len(user)==1:
         user=user[0]
     else:
         return {"message":"the id is wrong"}
     user.qm=item.qm
     user.save()
+    return {"message":"success"}
 
 class putChangePasswordArg(BaseModel):
-    id:int
     oldPassword:str
     newPassword:str
 @app.put("/user/changePassword")
-async def putChangePasswordApi(item:putChangePasswordArg):
-    v_user=db.filter("user",id=item.id)
+async def putChangePasswordApi(item:putChangePasswordArg,sessionId=Cookie(None)):
+    s=session.getSession(sessionId)
+    if s:
+        uid=s["userId"]
+    else:
+        return {"message":"no signIn"}
+    v_user=db.filter("user",id=uid)
     if len(v_user)!=1:
         return {"message":"the id is wrong"}
     user=v_user[0]
@@ -160,15 +197,14 @@ async def getTagDataApi(tagName:str):
         "blogs":datas
     }
 @app.get("/page/user")
-async def getUserDataApi(id:int=None,username:str=None):
-    if id==username==None:
-        return {
-            "message":"arg failed"
-        }
-    if id!=None:
-        user=db.filter("user",id=id)
-    elif username!=None:
-        user=db.filter("user",username=username)
+async def getUserDataApi(sessionId=Cookie(None)):
+    s=session.getSession(sessionId)
+    if s:
+        id=s["userId"]
+    else:
+        return {"message":"no signIn"}
+    user=db.filter("user",id=id)
+    
     if len(user)!=0:
         user=user[0]
         blogs=db.filter("blog",user=user.id)
