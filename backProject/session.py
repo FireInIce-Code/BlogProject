@@ -2,6 +2,7 @@ import json
 import hashlib
 sessionCount=0
 from pyDatabase import database
+db=None
 def init(database):
     global db
     db=database
@@ -25,7 +26,8 @@ def getSession(sessionId):
         return None
 
 def removeSession(sessionId):
-    db=db.filter("session",sessionId=sessionId)
+    global db
+    ds=db.filter("session",sessionId=sessionId)
     if len(ds)==1:
         db.remove("session",sessionId=sessionId)
         db.save()

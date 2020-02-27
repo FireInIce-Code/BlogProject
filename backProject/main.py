@@ -1,14 +1,16 @@
 import json
-
 import os
+import threading
 import time
-from fastapi import FastAPI,Cookie
-from starlette.responses import JSONResponse
-from pyDatabase import database
-import session
-import uvicorn
 
+import uvicorn
+from fastapi import Cookie, FastAPI
 from pydantic import BaseModel
+from starlette.responses import JSONResponse
+
+import confirmCode
+import session
+from pyDatabase import database
 
 sortItems = "Python C++ Javascript Algorithm ProgrammingLife".split(" ")
 
@@ -16,7 +18,7 @@ app = FastAPI()
 BASEDIR = os.path.dirname(__file__)
 db = database.Database(os.path.join(BASEDIR, "db.sqlite3"))
 session.init(db)
-
+codes={}
 def datasToArr(blogs):
     datas = []
     for blog in blogs:
@@ -118,11 +120,15 @@ async def postSignUpApi(item:postSignUpArg,sessionId=Cookie(None)):
 class postSignInArg(BaseModel):
     username:str
     password:str
+    code:str
 
 @app.post("/user/signIn")
 async def postSignInApi(item:postSignInArg,sessionId=Cookie(None)):
     if sessionId and session.getSession(sessionId):
         return {"message":"loginned"}
+    c=codes.get(item.username,None)
+    if c and item.code.lower()!=c.lower():
+        return {"message":"code wrong"}
     v_user=db.filter("user",username=item.username)
     if len(v_user)!=1:
         return {"message":"failed"}
@@ -135,6 +141,15 @@ async def postSignInApi(item:postSignInArg,sessionId=Cookie(None)):
         return response
     else:
         return {"message":"failed"}
+
+@app.post("/user/signOut")
+async def postSignOutApi(sessionId=Cookie(None)):
+    s=session.getSession(sessionId)
+    if s:
+        session.removeSession(sessionId)
+    response=JSONResponse(content={"message":"success"})
+    response.delete_cookie(key="sessionId")
+    return response
 
 class putChangeQmArg(BaseModel):
     qm:str
@@ -251,5 +266,21 @@ async def getBlogDataApi(id:int):
             "tag":sortItems[blog.tag]
         }
     }
+
+@app.get("/code")
+async def getCodeApi(username):
+    if len(db.filter("user",username=username))==0:
+        return {"message":"username wrong"}
+    global codes
+    code,imgD=confirmCode.get()
+    codes[username]=code.replace(" ","")
+    def delCode():
+        time.sleep(60)
+        if codes.get(username):
+            del codes[username]
+    t=threading.Thread(target=delCode)
+    t.start()
+    return imgD
+
 if __name__ == "__main__":
     uvicorn.run(app)
