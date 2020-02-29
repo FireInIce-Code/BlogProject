@@ -58,6 +58,8 @@
         /><br />
         <input type="button" class="btn btn-success" value="注册" @click="signUp();" />
       </div>
+      <br>
+      <router-link to="/user/signIn">已经有账户?去登陆!</router-link>
     </form>
     <b-modal id="modal" ref="modal" title="提示" hide-footer>
       <h3>{{info}}</h3>

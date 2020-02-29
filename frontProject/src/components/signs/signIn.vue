@@ -41,6 +41,8 @@
         <br />
         <input type="button" class="btn btn-success" value="登录" @click="login();" />
       </div>
+      <br>
+      <router-link to="/user/signUp">还没有账户?去注册!</router-link>
     </form>
     <b-modal id="modal" ref="modal" title="提示" hide-footer>
       <h3>{{this.info}}</h3>
@@ -123,7 +125,7 @@ export default {
     hide() {
       this.$bvModal.hide("modal");
       if(this.success){
-        this.$router.push("/user");
+        this.$router.push("/info");
       }
     }
   },
