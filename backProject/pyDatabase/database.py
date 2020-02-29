@@ -1,7 +1,7 @@
 import sqlite3
 import os
 class Data:
-    def __init__(self,dic,table,connection,pd):
+    def __init__(self,dic,table,connection):
         self._table=table
         self._dic={}
         self._connection=connection
@@ -61,7 +61,7 @@ class Database:
                 pd+=f"{i}={kw[i]} "
         return pd
     def filter(self,table,**kw):
-        pd=self.pd(**kw).strip(" ").replace(" ","and")
+        pd=self.pd(**kw).strip(" ")
         sql=f"select * from {table} where {pd};"
         cursor=self.connection.execute(sql)
         keys=[x[0] for x in cursor.description]
@@ -71,7 +71,7 @@ class Database:
             d=dict()
             for j in range(len(keys)):
                 d[keys[j]]=i[j]
-            ans.add(Data(d,table,self.connection,pd))
+            ans.add(Data(d,table,self.connection))
         return ans
     def get(self,table,**kw):
         datas=self.filter(table,**kw)
@@ -99,7 +99,7 @@ class Database:
             d=dict()
             for j in range(len(keys)):
                 d[keys[j]]=i[j]
-            ans.add(Data(d,table,self.connection,pd))
+            ans.add(Data(d,table,self.connection))
         return ans
     def __del__(self):
         self.connection.commit()
