@@ -62,7 +62,10 @@ class Database:
         return pd
     def filter(self,table,**kw):
         pd=self.pd(**kw).strip(" ")
-        sql=f"select * from {table} where {pd};"
+        if(len(kw)!=0):
+            sql=f"select * from {table} where {pd};"
+        else:
+            sql=f"select * from {table};"
         cursor=self.connection.execute(sql)
         keys=[x[0] for x in cursor.description]
         result=cursor.fetchall()

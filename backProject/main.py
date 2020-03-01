@@ -30,7 +30,7 @@ def datasToArr(blogs):
             "id": blog.id,
             "user": blog.user,
             "date": blog.date,
-            "tag": blog.tag
+            "tag": sortItems[blog.tag]
         })
     return datas
 
@@ -225,10 +225,15 @@ async def putChangePasswordApi(item: putChangePasswordArg, sessionId=Cookie(None
 async def getHomeDataApi(num: int):
     blogs = db.filterNum("blog", "time", reverse=True, num=num)
     datas = datasToArr(blogs)
+    texts=[]
+    textDatas=db.filter("news")
+    for i in textDatas:
+        texts.append(i.text)
     data = {
         "message": "success",
         "sortItems": sortItems,
-        "newBlogs": datas
+        "newBlogs": datas,
+        "texts":texts
     }
     return data
 

@@ -18,7 +18,7 @@
           align="left"
         >
           <div class="col-5">
-            <h3>{{blog.title}}</h3>
+            <h3>{{blog.title}}[{{blog.tag}}]</h3>
             <h5>Date:{{blog.date}}</h5>
           </div>
           <div class="blog-right">
