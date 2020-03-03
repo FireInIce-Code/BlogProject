@@ -3,11 +3,14 @@ import os
 import threading
 import time
 import hashlib
+import base64
+import io
 
 import uvicorn
 from fastapi import Cookie, FastAPI
 from pydantic import BaseModel
-from starlette.responses import JSONResponse
+from fastapi import File, UploadFile
+from starlette.responses import JSONResponse, StreamingResponse
 
 import confirmCode
 import session
@@ -35,6 +38,14 @@ def datasToArr(blogs):
     return datas
 
 
+@app.get("/sortItems")
+async def getSortItemsApi():
+    return {
+        "message": "success",
+        "sortItems": sortItems
+    }
+
+
 class postNewBlogArg(BaseModel):
     tag: int
     inner: str
@@ -48,10 +59,38 @@ async def postNewBlogApi(item: postNewBlogArg, sessionId=Cookie(None)):
         user = s['userId']
     else:
         return {"message": "no signIn"}
-    date = time.strftime("%Y-%m-%d")
-    currentTime = int(time.time())
-    db.create("blog", tag=item.tag, inner=item.inner, user=user,
-              date=date, time=currentTime, title=item.title)
+    if len(db.filter("blog", title=item.title, user=user)) != 0:
+        return {"message": "repeat"}
+    else:
+        date = time.strftime("%Y-%m-%d")
+        currentTime = int(time.time())
+        db.create("blog", tag=item.tag, inner=item.inner, user=user,
+                  date=date, time=currentTime, title=item.title)
+    return {"message": "success"}
+
+
+class postEditBlogApi(BaseModel):
+    title: str
+    inner: str
+
+
+@app.post("/blog/new")
+async def postEditBlogApi(item: postEditBlogApi, sessionId=Cookie(None)):
+    s = session.getSession(sessionId)
+    if s:
+        user = s['userId']
+    else:
+        return {"message": "no signIn"}
+    blogs = db.filter("blog", title=item.title, user=user)
+    if len(blogs) == 1:
+        blog = blogs[0]
+        date = time.strftime("%Y-%m-%d")
+        currentTime = int(time.time())
+        blog.date = date
+        blog.inner = item.inner
+        blog.save()
+    else:
+        return {'message': "none"}
     return {"message": "success"}
 
 
@@ -121,7 +160,7 @@ async def postSignUpApi(item: postSignUpArg, sessionId=Cookie(None)):
         return {"message": "username repeat"}
     db.create("user", username=item.username,
               nickname=item.nickname, password=item.password)
-    uid = db.get("user",username=item.username).id
+    uid = db.get("user", username=item.username).id
     sessionId = session.newSessionId()
     session.setSession(sessionId, {"userId": uid})
     response = JSONResponse(content={"message": "success"})
@@ -150,18 +189,20 @@ async def postSignInApi(item: postSignInArg, sessionId=Cookie(None)):
     user = v_user.first()
     if user.password == item.password:
         response = JSONResponse(content={"message": "success"})
-        pd=r"{%userId%: "+str(user.id)+r"}"
-        ss=db.filter("session",value=pd)
-        if len(ss)==0:
+        pd = r"{%userId%: "+str(user.id)+r"}"
+        ss = db.filter("session", value=pd)
+        if len(ss) == 0:
             sessionId = session.newSessionId()
-            response.set_cookie(key="sessionId", value=sessionId, max_age=60*60)
+            response.set_cookie(
+                key="sessionId", value=sessionId, max_age=60*60)
             session.setSession(sessionId, {"userId": user.id})
             return response
         else:
-            sessionId=ss.first().sessionId
-            response.set_cookie(key="sessionId", value=sessionId, max_age=60*60)
+            sessionId = ss.first().sessionId
+            response.set_cookie(
+                key="sessionId", value=sessionId, max_age=60*60)
             return response
-            
+
     else:
         return {"message": "failed"}
 
@@ -225,15 +266,15 @@ async def putChangePasswordApi(item: putChangePasswordArg, sessionId=Cookie(None
 async def getHomeDataApi(num: int):
     blogs = db.filterNum("blog", "time", reverse=True, num=num)
     datas = datasToArr(blogs)
-    texts=[]
-    textDatas=db.filter("news")
+    texts = []
+    textDatas = db.filter("news")
     for i in textDatas:
         texts.append(i.text)
     data = {
         "message": "success",
         "sortItems": sortItems,
         "newBlogs": datas,
-        "texts":texts
+        "texts": texts
     }
     return data
 
@@ -321,6 +362,49 @@ async def getCodeApi(username: str, method: str = "signIn"):
     t = threading.Thread(target=delCode)
     t.start()
     return imgD
+
+
+@app.post("/edit/uploadImg")
+async def postUploadImgApi(sessionId=Cookie(None), img: UploadFile = File(None)):
+    s = session.getSession(sessionId)
+    if s:
+        user = db.get("user", id=s['userId'])
+    else:
+        return {"message": "no signIn"}
+    data = img.file.read()
+    imgId = db.create("files", file=database.sqlite3.Binary(
+        data), userId=user.id).id
+    url = f"/api/asset/img/{imgId}"
+    return {
+        "message": "success",
+        "url": url
+    }
+
+
+@app.post("/edit/deleteImg")
+async def postDelImgApi(imgId: int, sessionId=Cookie(None)):
+    s = session.getSession(sessionId)
+    if s:
+        user = db.get("user", id=s['userId'])
+    else:
+        return {"message": "no signIn"}
+    imgs = db.filter("files", id=imgId)
+    if len(imgs) == 1:
+        img = imgs[0]
+        if img.userId == user.id:
+            db.remove("files", id=imgId)
+        else:
+            return {"message": "403"}
+
+
+@app.get("/asset/img/{imgId}")
+async def getImgApi(imgId: int):
+    img = db.get("files", id=imgId)
+    imgD = img.file
+    buffer = io.BytesIO(imgD)
+    r = StreamingResponse(buffer)
+    return r
+
 
 if __name__ == "__main__":
     uvicorn.run(app)

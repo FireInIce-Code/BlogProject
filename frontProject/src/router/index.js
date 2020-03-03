@@ -6,6 +6,7 @@ import signUp from "@/components/signs/signUp";
 import info from "@/components/signs/info";
 import home from "@/components/blogs/home";
 import write from "@/components/blogs/write";
+import newBlog from "@/components/blogs/newBlog"
 
 Vue.use(Router);
 
@@ -20,6 +21,11 @@ export default new Router({
       path:"/write",
       name:"write",
       component:write
+    },
+    {
+      path:"/newBlog",
+      name:"newBlog",
+      component:newBlog
     },
     {
       path: "/user",

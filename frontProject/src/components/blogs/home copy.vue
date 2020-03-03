@@ -131,11 +131,10 @@ export default {
     padding-top:30px;
 }
 .leftBox{
-    background-color: rgb(219, 245, 253);
-    /* border-right:solid 3px snow; */
+    background-color: skyblue;
 }
 .item{
-    background-color: lightskyblue;
+    background-color: orange;
     margin-top:10px;
     margin-bottom:10px;
     border-radius:20px;
@@ -149,12 +148,12 @@ export default {
 .item:hover{
     margin-left:20px;
     margin-right:20px;
-    background-color: lightblue;
+    background-color: orangered;
     cursor: pointer;
 }
 .newBox{
     border-radius: 20px;
-    background-color: rgb(219, 245, 253);
+    background-color: dodgerblue;
 }
 .newsImg{
     border-radius: 20px;

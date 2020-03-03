@@ -85,12 +85,20 @@ class Database:
         sql=f"delete from {table} where {self.pd(**kw)};"
         self.connection.execute(sql)
         self.save()
+    def lastRow(self,table):
+        return self.connection.execute(f"select last_insert_rowid() from {table}").fetchall()[0][0]
     def create(self,table,**kw):
         keys=list(kw.keys())
-        values=[f'"{x}"' if type(x)==str else f"{x}" for x in kw.values()]
-        sql=f"insert into {table} ({','.join(keys)}) values ({','.join(values)});"
-        self.connection.execute(sql)
+        #values=[f'"{x}"' if type(x)==str else f"{x}" for x in kw.values()]
+        values=list(kw.values())
+        sql=f"insert into {table} ({','.join(keys)}) values ({','.join(list('?'*len(values)))});"
+        self.connection.execute(sql,values)
         self.save()
+        obj=self.get(table,id=self.lastRow(table))
+        return obj
+        
+        
+        
     def filterNum(self,table,orderkey,reverse=False,num=-1,**kw):
         pd=self.pd(**kw).strip(" ").replace(" ","and")
         sql=f"select * from {table} {'where {pd}' if len(pd) else ''} order by {orderkey} {'asc' if not reverse else 'desc'} {'limit '+str(num) if num!=-1 else ''};"

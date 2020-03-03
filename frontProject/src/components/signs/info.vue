@@ -10,11 +10,12 @@
       <button class="btn btn-primary" @click="exit">退出登录</button>
     </div>
     <div class="col-9 rightBar h-100">
-      <div class="text-center rounded h-75 w-75">
-        <h2 class="text-white">发表的博客</h2>
+      <div class="text-center h-75 w-75">
+        <h2 class="blogTitle">发表的博客</h2>
         <div
           v-for="blog in values.blogs"
-          class="bg-secondary text-white rounded blog row"
+          :key="blog"
+          class="rounded blog row"
           align="left"
         >
           <div class="col-5">
@@ -23,7 +24,7 @@
           </div>
           <div class="blog-right">
             <br />
-            <router-link v-bind:to="'blogs/'+blog.id" tag="button" class="btn btn-success">进入</router-link>
+            <router-link v-bind:to="'blogs/'+blog.id" tag="button" class="btn btn-s">进入</router-link>
           </div>
         </div>
       </div>
@@ -65,11 +66,25 @@ export default {
 };
 </script>
 <style scoped>
+h3{
+  color:dodgerblue;
+}
+.btn-s{
+  background-color: aquamarine;
+  color:white;
+  border:none;
+}
+.btn-s:active{
+  background-color:rgb(0, 255, 170);
+}
+.leftBar,.rightBar{
+  margin-top: 50px;
+}
 .leftBar {
   background-color: rgb(240, 248, 255, 0.5);
 }
 .rightBar {
-  margin-top: 30px;
+  margin-top: 80px;
   position: relative;
 }
 .rightBar > div {
@@ -77,13 +92,14 @@ export default {
   right: 50px;
   background-color: rgb(240, 255, 255, 0.5);
   border-radius: 20px;
+  overflow: auto;
+  border-radius: 20px;
 }
 .row.bg {
   height: 100%;
   background-image: url("../../assets/userbg.jpg");
   background-size: 100% 100%;
   overflow: hidden;
-  margin-top: 50px;
 }
 .blog {
   padding-left: 30px;
@@ -94,10 +110,15 @@ export default {
   margin-bottom: 20px;
   position: relative;
   overflow: auto;
+  /* background-color: skyblue; */
+  color:dodgerblue;
 }
 .blog-right {
   position: absolute;
   right: 0;
   padding-right: 20px;
+}
+.blogTitle{
+  color:dodgerblue;
 }
 </style>
