@@ -1,18 +1,26 @@
 import sqlite3
 import os
 class Data:
-    def __init__(self,dic,table,connection):
+    def __init__(self,dic:dict,table,connection):
         self._table=table
         self._dic={}
         self._connection=connection
         for i in dic:
             setattr(self,i,dic[i])
-        self._pd=Database.pd(**self._dic)
+        self._pd=dic.copy()
     def save(self):
-        sql=f"update {self._table} set {Database.pd(**self._dic).replace(' ',',').strip(',')} where {self._pd.strip(' ').replace(' ',' AND ')}"
-        self._connection.execute(sql)
+        ditems=self._dic.items()
+        pitems=self._pd.items()
+        sets=",".join([str(x[0])+"=?" for x in ditems])
+        setValues=tuple([x[1] for x in ditems])
+        pds=" and ".join(str(x[0])+"=?" for x in pitems)
+        pdValues=tuple(x[1] for x in pitems)
+        values=setValues+pdValues
+        sql=f"update {self._table} set "+sets+" where "+pds+";"
+        print(sql)
+        self._connection.execute(sql,values)
         self._connection.commit()
-        self._pd=Database.pd(**self._dic)
+        self._pd=self._pd.copy()
     def __setattr__(self,item,value):
         self.__dict__[item]=value
         if item not in ("_table","_dic","_connection","_pd"):
@@ -56,12 +64,12 @@ class Database:
         pd=""
         for i in kw:
             if type(kw[i])==str:
-                pd+=f"{i}=\"{kw[i]}\" "
+                pd+=f"{i}=\"{kw[i]}\"\r"
             else:
-                pd+=f"{i}={kw[i]} "
+                pd+=f"{i}={kw[i]}\r"
         return pd
     def filter(self,table,**kw):
-        pd=self.pd(**kw).strip(" ")
+        pd=self.pd(**kw).strip("\r").replace("\r"," and ")
         if(len(kw)!=0):
             sql=f"select * from {table} where {pd};"
         else:
@@ -82,25 +90,25 @@ class Database:
             raise ValueError("没有数据或查到多个数据")
         return datas.first()
     def remove(self,table,**kw):
-        sql=f"delete from {table} where {self.pd(**kw)};"
+        sql=f"delete from {table} where "+self.pd(**kw).replace('\r',' and ')+";"
         self.connection.execute(sql)
         self.save()
     def lastRow(self,table):
         return self.connection.execute(f"select last_insert_rowid() from {table}").fetchall()[0][0]
     def create(self,table,**kw):
         keys=list(kw.keys())
-        #values=[f'"{x}"' if type(x)==str else f"{x}" for x in kw.values()]
         values=list(kw.values())
         sql=f"insert into {table} ({','.join(keys)}) values ({','.join(list('?'*len(values)))});"
         self.connection.execute(sql,values)
         self.save()
-        obj=self.get(table,id=self.lastRow(table))
+        if "id" in [x[0] for x in self.connection.execute(f"select * from {table}").description]:
+            obj=self.get(table,id=self.lastRow(table))
         return obj
         
         
         
     def filterNum(self,table,orderkey,reverse=False,num=-1,**kw):
-        pd=self.pd(**kw).strip(" ").replace(" ","and")
+        pd=self.pd(**kw).strip("\r").replace("\r"," and ")
         sql=f"select * from {table} {'where {pd}' if len(pd) else ''} order by {orderkey} {'asc' if not reverse else 'desc'} {'limit '+str(num) if num!=-1 else ''};"
         cursor=self.connection.execute(sql)
         keys=[x[0] for x in cursor.description]

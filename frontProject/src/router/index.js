@@ -6,26 +6,37 @@ import signUp from "@/components/signs/signUp";
 import info from "@/components/signs/info";
 import home from "@/components/blogs/home";
 import write from "@/components/blogs/write";
-import newBlog from "@/components/blogs/newBlog"
-
+import myBlogs from "@/components/blogs/myBlogs";
+import blogView from "@/components/blogs/blog";
+import test from "@/components/test/test.vue";
 Vue.use(Router);
 
 export default new Router({
   routes: [
+    {
+      path:"/test",
+      component: test
+    },
+
     {
       path: "/",
       name: "home",
       component: home
     },
     {
-      path:"/write",
+      path:"/write/:title",
       name:"write",
       component:write
     },
     {
-      path:"/newBlog",
-      name:"newBlog",
-      component:newBlog
+      path:"/write",
+      name:"myBlogs",
+      component:myBlogs
+    },
+    {
+      path:"/blogs/:id",
+      name:"blog",
+      component:blogView
     },
     {
       path: "/user",

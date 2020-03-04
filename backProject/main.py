@@ -7,6 +7,7 @@ import base64
 import io
 
 import uvicorn
+import markdown
 from fastapi import Cookie, FastAPI
 from pydantic import BaseModel
 from fastapi import File, UploadFile
@@ -74,7 +75,7 @@ class postEditBlogApi(BaseModel):
     inner: str
 
 
-@app.post("/blog/new")
+@app.post("/blog/edit")
 async def postEditBlogApi(item: postEditBlogApi, sessionId=Cookie(None)):
     s = session.getSession(sessionId)
     if s:
@@ -333,12 +334,14 @@ async def getBlogDataApi(id: int):
             "inner": dp.inner,
             "goodNum": len(db.filter("good", plId=dp.id))
         })
+    
+    inner=markdown.markdown(blog.inner)
     return {
         "message": "success",
         "pls": pls,
         "blog": {
             "title": blog.title,
-            "inner": blog.inner,
+            "inner": inner,
             "id": blog.id,
             "user": db.get("user", id=blog.user).nickname,
             "date": blog.date,
@@ -363,6 +366,24 @@ async def getCodeApi(username: str, method: str = "signIn"):
     t.start()
     return imgD
 
+@app.get("/edit/blog")
+async def postUploadImgApi(title:str,sessionId=Cookie(None)):
+    s=session.getSession(sessionId)
+    if s:
+        user=db.get("user",id=s["userId"])
+    else:
+        return {"message":"no signIn"}
+    blogs=db.filter("blog",title=title,user=user.id)
+    if len(blogs)==1:
+        blog=blogs[0]
+        return {
+            "title":blog.title,
+            "inner":blog.inner,
+            "id":blog.id,
+            "message":"success"
+        }
+    else:
+        return {"message":"none"}
 
 @app.post("/edit/uploadImg")
 async def postUploadImgApi(sessionId=Cookie(None), img: UploadFile = File(None)):

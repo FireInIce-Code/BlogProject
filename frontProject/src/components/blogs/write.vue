@@ -12,6 +12,12 @@
         @save="save"
         ref="md"
       />
+      <b-modal id="modal" ref="modal" title="提示" hide-footer @hide="hide()">
+      <h3>{{this.info}}</h3>
+      <br />
+      <br />
+      <b-button block @click="hide()">确定</b-button>
+    </b-modal>
     </div>
   </div>
 </template>
@@ -24,6 +30,7 @@ export default {
       imgs: {},
       title:"",
       tag:"",
+      info:"",
       sortItems:[],
       toolbars: {
         bold: true, // 粗体
@@ -39,7 +46,7 @@ export default {
         ul: true, // 无序列表
         link: true, // 链接
         imagelink: true, // 图片链接
-        code: false, // code
+        code: true, // code
         table: true, // 表格
         fullscreen: true, // 全屏编辑
         readmodel: true, // 沉浸式阅读
@@ -63,10 +70,32 @@ export default {
     };
   },
   methods: {
+    f(){
+
+    },
+    hide(){
+      this.$refs.modal.hide();
+      this.f();
+    },
+    alert(info,f=this.f){
+      this.info=info;
+      this.f=f;
+      this.$refs.modal.show();
+    },
     getData(){
-      Axios.get("/api/sortItems").then(response=>{
-        this.sortItems=response.data.sortItems;
-        console.log(this.sortItems);
+      this.title=this.$route.params.title;
+      Axios.get("/api/edit/blog?title="+this.title).then(response=>{
+        if(response.data.message=="success"){
+          this.value=response.data.inner;
+        }else if(response.data.message=="no signIn"){
+          this.alert("你还没有登录!",()=>{
+            this.$router.push("/user/signIn");
+          });
+        }else if(response.data.message=="none"){
+          this.alert("没有这篇文章!",()=>{
+            this.$router.push("/write/");
+          })
+        }
       })
     },
     addImg(pos, file) {
@@ -91,7 +120,6 @@ export default {
       pos=pos[0];
       var urls=pos.split("/");
       var imgId=urls[urls.length-1];
-      //console.log(imgId)
       Axios.post("/api/edit/deleteImg?imgId="+imgId);
       delete this.imgs[pos];
     },
@@ -124,5 +152,8 @@ select.form-control{
   width:400px;
   height:50px;
   font-size:30px;
+}
+.v-note-wrapper{
+  z-index:1000;
 }
 </style>

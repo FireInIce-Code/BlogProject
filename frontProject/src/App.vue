@@ -9,7 +9,7 @@
           <router-link to="/info" tag="a" class="nav-link text-primary">用户中心</router-link>
         </li>
         <li class="nav-item">
-          <router-link to="/write" tag="a" class="nav-link text-primary">写文章</router-link>
+          <router-link to="/write" tag="a" class="nav-link text-primary">文章管理</router-link>
         </li>
         <li class="nav-item">
           <router-link to="" tag="a" class="nav-link"></router-link>
