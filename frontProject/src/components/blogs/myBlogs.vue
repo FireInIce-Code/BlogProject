@@ -1,8 +1,10 @@
 <template>
   <div class="bg">
     <div class="content" align="center">
+      <h1 class="text-primary">我的文章</h1>
+      <hr width="80%" />
       <h3 class="d-inline text-primary">分类:&nbsp;&nbsp;&nbsp;&nbsp;</h3>
-      <select class="form-control" v-model="tag" @change="changeTag">
+      <select ref="select" class="form-control" v-model="tag" @change="changeTag">
         <option selected="selected">所有</option>
         <option v-for="item in sortItems" :key="item">{{item}}</option>
       </select>
@@ -13,23 +15,25 @@
           :key="blog"
           align="left"
         >
-            <div class="col-9 d-inline" align="left">
-                {{blog.title}}<br>
-                Date:{{blog.date}}
-            </div>
-            <div class="offset-6 col-6" align="right">
-                <router-link class="btn btn-success button" v-bind:to="'/blogs/'+blog.id"
-          tag="div">
-                    查看
-                </router-link>
-                <router-link class="btn btn-success button" v-bind:to="'/write/'+blog.title"
-          tag="div">
-                    编辑
-                </router-link>
-            </div>
+          <div class="col-9 d-inline" align="left">
+            {{blog.title}}
+            <br />
+            Date:{{blog.date}}
+          </div>
+          <div class="offset-6 col-6" align="right">
+            <router-link class="btn btn-success button" v-bind:to="'/blogs/'+blog.id" tag="div">查看</router-link>
+            <router-link
+              class="btn btn-warning button"
+              v-bind:to="'/write/'+replaceStr(blog.title)"
+              tag="div"
+            >编辑</router-link>
+            <button class="btn btn-danger button" v-bind:id="'delBlog'+blog.id" @click="delBlog($event)">删除</button>
+          </div>
         </div>
       </ul>
     </div>
+    <br />
+    <br />
   </div>
 </template>
 
@@ -41,7 +45,7 @@ export default {
       tag: "",
       sortItems: [],
       allblogs: [],
-      blogs:[]
+      blogs: []
     };
   },
   methods: {
@@ -53,61 +57,79 @@ export default {
           return;
         }
         this.allblogs = data.blogs;
+        this.changeTag();
       });
       Axios.get("/api/sortItems").then(response => {
         var data = response.data;
         this.sortItems = data.sortItems;
       });
     },
-    changeTag(event){
-        var tag=event.target.value;
-        if(tag=="所有"){
-            this.blogs=this.allblogs;
-        }else{
-            this.blogs=[];
-            for(var i=0;i<this.allblogs.length;i++){
-                if(this.allblogs[i].tag==tag){
-                    this.blogs.push(this.allblogs[i]);
-                }
-            }
+    changeTag(event) {
+      var tag = this.tag;
+      if (tag == "所有") {
+        this.blogs = this.allblogs;
+      } else {
+        this.blogs = [];
+        for (var i = 0; i < this.allblogs.length; i++) {
+          if (this.allblogs[i].tag == tag) {
+            this.blogs.push(this.allblogs[i]);
+          }
         }
+      }
+    },
+    delBlog(e){
+      var id=parseInt(e.target.id.slice(7));
+      Axios.post("/api/edit/del?id="+id);
+      this.getData();
+    },
+    replaceStr(str) {
+      return str
+        .replace(/:/g, "%3A")
+        .replace(/\//g, "%2F")
+        .replace(/\?/g, "%3F")
+        .replace(/=/g, "%3D")
+        .replace(/\+/g, "%2B")
+        .replace(/&/g, "%26")
+        .replace(/ /g, "%20")
+        .replace(/#/g, "%23");
     }
   },
   mounted() {
+    this.tag = "所有";
     this.getData();
   }
 };
 </script>
 
-<style>
+<style scoped>
 .bg {
   background-color: aliceblue;
-  height: 100%;
-  margin-top:0;
-  padding-top:1px;
+  min-height: 100%;
+  margin-top: 0;
+  padding-top: 1px;
 }
 .content {
-  margin-top: 70px;
+  margin-top: 100px;
 }
-select.form-control{
-    display:inline-block;
-    width:400px;
-    height:60px;
-    font-size:40px;
-    padding-top:0px;
-    padding-bottom: 0px;
+select.form-control {
+  display: inline-block;
+  width: 400px;
+  height: 60px;
+  font-size: 40px;
+  padding-top: 0px;
+  padding-bottom: 0px;
 }
-.blog-list{
-    height:600px;
-    width:70%;
-    overflow: auto;
+.blog-list {
+  height: 600px;
+  width: 70%;
+  overflow: auto;
 }
-.blog-list>div{
-    background-color: rgb(137, 247, 255);
-    color:black;
+.blog-list > div {
+  background-color: rgb(137, 212, 255);
+  color: white;
 }
-.blog-list>div:hover{
-    background-color: rgb(0, 140, 255);
-    color:white;
+.blog-list > div:hover {
+  background-color: rgb(0, 140, 255);
+  color: white;
 }
 </style>

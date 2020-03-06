@@ -132,6 +132,7 @@ export default {
         }else if(response.data.message=="success"){
           this.alert("恭喜你,注册成功!")
           this.$router.push("/user");
+          window.location.reload();
         }else{
           this.alert(response.data.message);
         }

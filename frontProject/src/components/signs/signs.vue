@@ -7,15 +7,12 @@
 </template>
 <script>
 export default {
-  name: "signs"
+  name: "signs",
+  mounted(){
+  }
 };
 </script>
-<style>
-html,
-body {
-  height: 100%;
-  width: 100%;
-}
+<style scoped>
 .signs-bg {
   width: 100%;
   height: 100%;

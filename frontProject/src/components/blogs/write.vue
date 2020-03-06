@@ -84,7 +84,7 @@ export default {
     },
     getData(){
       this.title=this.$route.params.title;
-      Axios.get("/api/edit/blog?title="+this.title).then(response=>{
+      Axios.get("/api/edit/blog?title="+this.replaceStr(this.title)).then(response=>{
         if(response.data.message=="success"){
           this.value=response.data.inner;
         }else if(response.data.message=="no signIn"){
@@ -126,8 +126,20 @@ export default {
     save(md, html) {
       Axios.post("/api/blog/edit",{
         inner:this.value,
-        title:this.title
+        title:this.title,
+        htmlInner:html
       })
+    },
+    replaceStr(str) {
+      return str
+        .replace(/:/g, "%3A")
+        .replace(/\//g, "%2F")
+        .replace(/\?/g, "%3F")
+        .replace(/=/g, "%3D")
+        .replace(/\+/g, "%2B")
+        .replace(/&/g, "%26")
+        .replace(/ /g, "%20")
+        .replace(/#/g, "%23");
     }
   },
   mounted(){

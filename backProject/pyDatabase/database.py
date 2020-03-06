@@ -14,13 +14,20 @@ class Data:
         sets=",".join([str(x[0])+"=?" for x in ditems])
         setValues=tuple([x[1] for x in ditems])
         pds=" and ".join(str(x[0])+"=?" for x in pitems)
-        pdValues=tuple(x[1] for x in pitems)
+        pdValues=tuple([x[1] for x in pitems])
         values=setValues+pdValues
         sql=f"update {self._table} set "+sets+" where "+pds+";"
-        print(sql)
         self._connection.execute(sql,values)
         self._connection.commit()
-        self._pd=self._pd.copy()
+        self._pd=self._dic.copy()
+    def delete(self):
+        pitems=self._pd.items()
+        pds=" and ".join(str(x[0])+"=?" for x in pitems)
+        pdValues=tuple([x[1] for x in pitems])
+        sql=f"delete from {self._table} where {pds}"
+        self._connection.execute(sql,pdValues)
+        self._connection.commit()
+        self._pd=self._dic.copy()
     def __setattr__(self,item,value):
         self.__dict__[item]=value
         if item not in ("_table","_dic","_connection","_pd"):
@@ -90,7 +97,8 @@ class Database:
             raise ValueError("没有数据或查到多个数据")
         return datas.first()
     def remove(self,table,**kw):
-        sql=f"delete from {table} where "+self.pd(**kw).replace('\r',' and ')+";"
+        sql=f"delete from {table} where "+self.pd(**kw).strip('\r').replace('\r',' and ')+";"
+        print(sql)
         self.connection.execute(sql)
         self.save()
     def lastRow(self,table):
@@ -103,7 +111,7 @@ class Database:
         self.save()
         if "id" in [x[0] for x in self.connection.execute(f"select * from {table}").description]:
             obj=self.get(table,id=self.lastRow(table))
-        return obj
+            return obj
         
         
         

@@ -4,10 +4,9 @@
       <img src="../../assets/usericon.png" width="300" height="300" />
       <h3>{{values.userInfo.nickname}}</h3>
       <h3>{{values.userInfo.qm}}</h3>
-      <h3>你的经验：{{values.userInfo.exp}}</h3>
+      <h3>经验：{{values.userInfo.exp}}</h3>
       <h3>K币：{{values.userInfo.k}}</h3>
-      <h3>你的用户名:{{values.userInfo.username}}</h3>
-      <button class="btn btn-primary" @click="exit">退出登录</button>
+      <h3>用户名:{{values.userInfo.username}}</h3>
     </div>
     <div class="col-9 rightBar h-100">
       <div class="text-center h-75 w-75">
@@ -24,7 +23,7 @@
           </div>
           <div class="blog-right">
             <br />
-            <router-link v-bind:to="'blogs/'+blog.id" tag="button" class="btn btn-s">进入</router-link>
+            <router-link v-bind:to="'/blogs/'+blog.id" tag="button" class="btn btn-s">进入</router-link>
           </div>
         </div>
       </div>
@@ -43,7 +42,7 @@ export default {
   },
   methods: {
     getData() {
-      Axios.get("/api/page/user")
+      Axios.get("/api/page/user?id="+(this.$route.params.userId||0))
         .then(
           (response => {
             if(response.data.message!="success"){
@@ -54,10 +53,6 @@ export default {
           }).bind(this)
         )
         .catch(console.log);
-    },
-    exit(){
-        Axios.post("/api/user/signOut");
-        this.$router.push("/user/signIn");
     }
   },
   mounted() {

@@ -126,6 +126,7 @@ export default {
       this.$bvModal.hide("modal");
       if(this.success){
         this.$router.push("/info");
+        window.location.reload();
       }
     }
   },

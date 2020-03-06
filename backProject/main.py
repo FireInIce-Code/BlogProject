@@ -32,12 +32,16 @@ def datasToArr(blogs):
         datas.append({
             "title": blog.title,
             "id": blog.id,
-            "user": blog.user,
+            "user": db.get("user",id=blog.user).nickname,
             "date": blog.date,
-            "tag": sortItems[blog.tag]
+            "tag": sortItems[blog.tag],
+            "good":len(db.filter("blogGood",blogId=blog.id))
         })
     return datas
 
+def sessionDataTimeSet(response):
+    pass
+    
 
 @app.get("/sortItems")
 async def getSortItemsApi():
@@ -66,13 +70,14 @@ async def postNewBlogApi(item: postNewBlogArg, sessionId=Cookie(None)):
         date = time.strftime("%Y-%m-%d")
         currentTime = int(time.time())
         db.create("blog", tag=item.tag, inner=item.inner, user=user,
-                  date=date, time=currentTime, title=item.title)
+                  date=date, goodNum=0, title=item.title,htmlInner="")
     return {"message": "success"}
 
 
 class postEditBlogApi(BaseModel):
     title: str
     inner: str
+    htmlInner:str
 
 
 @app.post("/blog/edit")
@@ -89,6 +94,7 @@ async def postEditBlogApi(item: postEditBlogApi, sessionId=Cookie(None)):
         currentTime = int(time.time())
         blog.date = date
         blog.inner = item.inner
+        blog.htmlInner=item.htmlInner
         blog.save()
     else:
         return {'message': "none"}
@@ -114,13 +120,33 @@ async def postNewGoodApi(item: postNewGoodArg, sessionId=Cookie(None)):
                 "message": "self"
             }
 
-        if len(db.filter("good", plId=item.id)) != 0:
-            return {
-                "message": "repeat"
-            }
+        if len(db.filter("good", plId=item.id,userId=user)) != 0:
+            db.remove("good",plId=item.id,userId=user)
+        else:
+            db.create("good", plId=item.id, userId=user)
 
-    db.create("good", plId=item.id, userId=user)
     return {"message": "success"}
+
+class postNewBlogGoodArg(BaseModel):
+    id:int
+@app.post("/blog/blogGood")
+async def postNewBlogGoodApi(item:postNewBlogGoodArg,sessionId=Cookie(None)):
+    s=session.getSession(sessionId)
+    if s:
+        user=db.get("user",id=s['userId'])
+    else:
+        return {"message":"no signIn"}
+    blogs=db.filter("blog",id=item.id)
+    if len(blogs)==1:
+        blog=blogs[0]
+        goods=db.filter("blogGood",blogId=item.id,userId=user.id)
+        if len(goods)==1:
+            goods[0].delete()
+        else:
+            db.create("blogGood",blogId=item.id,userId=user.id)
+        return {"message":"success"}
+    else:
+        return {"message":"none"}
 
 
 class postNewPlArg(BaseModel):
@@ -165,7 +191,7 @@ async def postSignUpApi(item: postSignUpArg, sessionId=Cookie(None)):
     sessionId = session.newSessionId()
     session.setSession(sessionId, {"userId": uid})
     response = JSONResponse(content={"message": "success"})
-    response.set_cookie(key="sessionId", value=sessionId, max_age=60*60)
+    response.set_cookie(key="sessionId", value=sessionId)
     return response
 
 
@@ -195,13 +221,13 @@ async def postSignInApi(item: postSignInArg, sessionId=Cookie(None)):
         if len(ss) == 0:
             sessionId = session.newSessionId()
             response.set_cookie(
-                key="sessionId", value=sessionId, max_age=60*60)
+                key="sessionId", value=sessionId)
             session.setSession(sessionId, {"userId": user.id})
             return response
         else:
             sessionId = ss.first().sessionId
             response.set_cookie(
-                key="sessionId", value=sessionId, max_age=60*60)
+                key="sessionId", value=sessionId)
             return response
 
     else:
@@ -265,7 +291,7 @@ async def putChangePasswordApi(item: putChangePasswordArg, sessionId=Cookie(None
 
 @app.get("/page/home")
 async def getHomeDataApi(num: int):
-    blogs = db.filterNum("blog", "time", reverse=True, num=num)
+    blogs = db.filterNum("blog", "goodNum", reverse=True, num=num)
     datas = datasToArr(blogs)
     texts = []
     textDatas = db.filter("news")
@@ -282,6 +308,8 @@ async def getHomeDataApi(num: int):
 
 @app.get("/page/tag")
 async def getTagDataApi(tagName: str):
+    if tagName not in sortItems:
+        return {"message": "none"}
     blogs = db.filter("blog", tag=sortItems.index(tagName))
     datas = datasToArr(blogs)
     return {
@@ -291,12 +319,13 @@ async def getTagDataApi(tagName: str):
 
 
 @app.get("/page/user")
-async def getUserDataApi(sessionId=Cookie(None)):
-    s = session.getSession(sessionId)
-    if s:
-        id = s["userId"]
-    else:
-        return {"message": "no signIn"}
+async def getUserDataApi(id: int = None, sessionId=Cookie(None)):
+    if not id:
+        s = session.getSession(sessionId)
+        if s:
+            id = s["userId"]
+        else:
+            return {"message": "no signIn"}
     user = db.filter("user", id=id)
 
     if len(user) != 0:
@@ -332,10 +361,37 @@ async def getBlogDataApi(id: int):
             "user": db.get("user", id=dp.userId).nickname,
             "date": dp.date,
             "inner": dp.inner,
-            "goodNum": len(db.filter("good", plId=dp.id))
+            "goodNum": len(db.filter("good", plId=dp.id)),
+            "id":dp.id
         })
+    pls.reverse()
+
+    # extensions = [
+    #     'markdown.extensions.extra',
+    #     'markdown.extensions.codehilite',
+    #     'markdown.extensions.toc',
+    #     'markdown.extensions.tables'
+    # ]
     
-    inner=markdown.markdown(blog.inner)
+    # blogInner=list(blog.inner)
+    # codeTag=0
+    # i=0
+    # while i<len(blogInner):
+    #     if len(blogInner)-i>=3 and blogInner[i]==blogInner[i+1]==blogInner[i+2]=="`":
+    #         codeTag+=1
+    #         i+=3
+    #         continue
+    #     elif blogInner[i]=="\n":
+    #         if codeTag%2==0 and (i>len(blogInner)-3 or blogInner[i+2]!="\n") and (i<3 or blogInner[i-3:i]!=["`","`","`"]):
+    #             blogInner[i:i+1]=list("<br>\n")
+    #             i+=5
+    #             continue
+    #     i+=1
+
+
+    # blogInner="".join(blogInner)
+    # inner = markdown.markdown(blogInner, extensions=extensions)
+    inner=blog.htmlInner
     return {
         "message": "success",
         "pls": pls,
@@ -345,7 +401,8 @@ async def getBlogDataApi(id: int):
             "id": blog.id,
             "user": db.get("user", id=blog.user).nickname,
             "date": blog.date,
-            "tag": sortItems[blog.tag]
+            "tag": sortItems[blog.tag],
+            "good":len(db.filter("blogGood",blogId=blog.id))
         }
     }
 
@@ -366,22 +423,38 @@ async def getCodeApi(username: str, method: str = "signIn"):
     t.start()
     return imgD
 
+
 @app.get("/edit/blog")
-async def postUploadImgApi(title:str,sessionId=Cookie(None)):
+async def postUploadImgApi(title: str, sessionId=Cookie(None)):
+    s = session.getSession(sessionId)
+    if s:
+        user = db.get("user", id=s["userId"])
+    else:
+        return {"message": "no signIn"}
+    blogs = db.filter("blog", title=title, user=user.id)
+    if len(blogs) == 1:
+        blog = blogs[0]
+        return {
+            "title": blog.title,
+            "inner": blog.inner,
+            "id": blog.id,
+            "message": "success"
+        }
+    else:
+        return {"message": "none"}
+
+
+@app.post("/edit/del")
+async def postDelBlogApi(id:int,sessionId=Cookie(None)):
     s=session.getSession(sessionId)
     if s:
-        user=db.get("user",id=s["userId"])
+        user=db.get("user",id=s['userId'])
     else:
         return {"message":"no signIn"}
-    blogs=db.filter("blog",title=title,user=user.id)
+    blogs=db.filter("blog",id=id,user=user.id)
     if len(blogs)==1:
         blog=blogs[0]
-        return {
-            "title":blog.title,
-            "inner":blog.inner,
-            "id":blog.id,
-            "message":"success"
-        }
+        blog.delete()
     else:
         return {"message":"none"}
 

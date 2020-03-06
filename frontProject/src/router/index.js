@@ -8,35 +8,35 @@ import home from "@/components/blogs/home";
 import write from "@/components/blogs/write";
 import myBlogs from "@/components/blogs/myBlogs";
 import blogView from "@/components/blogs/blog";
-import test from "@/components/test/test.vue";
+import tag from "@/components/blogs/tagBlog";
+import test from "@/components/test/test";
 Vue.use(Router);
 
 export default new Router({
   routes: [
     {
-      path:"/test",
+      path: "/test",
       component: test
     },
-
     {
       path: "/",
       name: "home",
       component: home
     },
     {
-      path:"/write/:title",
-      name:"write",
-      component:write
+      path: "/write/:title",
+      name: "write",
+      component: write
     },
     {
-      path:"/write",
-      name:"myBlogs",
-      component:myBlogs
+      path: "/write",
+      name: "myBlogs",
+      component: myBlogs
     },
     {
-      path:"/blogs/:id",
-      name:"blog",
-      component:blogView
+      path: "/blogs/:id",
+      name: "blog",
+      component: blogView
     },
     {
       path: "/user",
@@ -59,6 +59,16 @@ export default new Router({
       path: "/info",
       name: "info",
       component: info
+    },
+    {
+      path: "/info/:userId",
+      name: "userInfo",
+      component: info
+    },
+    {
+      path:"/tag/:tag",
+      name:"tag",
+      component: tag
     }
   ]
 });
