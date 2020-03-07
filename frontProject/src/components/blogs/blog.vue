@@ -6,7 +6,7 @@
           <h1>{{data.blog.title}}<small>赞:{{data.blog.good}}</small></h1>
         </div>
         <div class="col-1 ml-auto blogGoodBox" align="right">
-          <button class="btn btn-primary" @click="blogGood">赞</button>
+          <button class="btn btn-primary" @click="blogGood()">赞</button>
         </div>
       </div>
       <hr />

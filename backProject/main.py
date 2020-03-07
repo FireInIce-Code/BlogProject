@@ -142,8 +142,12 @@ async def postNewBlogGoodApi(item:postNewBlogGoodArg,sessionId=Cookie(None)):
         goods=db.filter("blogGood",blogId=item.id,userId=user.id)
         if len(goods)==1:
             goods[0].delete()
+            blog.goodNum-=1
+            blog.save()
         else:
             db.create("blogGood",blogId=item.id,userId=user.id)
+            blog.goodNum+=1
+            blog.save()
         return {"message":"success"}
     else:
         return {"message":"none"}
@@ -402,7 +406,7 @@ async def getBlogDataApi(id: int):
             "user": db.get("user", id=blog.user).nickname,
             "date": blog.date,
             "tag": sortItems[blog.tag],
-            "good":len(db.filter("blogGood",blogId=blog.id))
+            "good":blog.goodNum
         }
     }
 
