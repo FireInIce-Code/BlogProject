@@ -1,4 +1,4 @@
-from pyDatabase import database
+﻿from pyDatabase import database
 import json
 import hashlib
 import time
@@ -18,7 +18,7 @@ def setSession(sessionId, valueDict):
     # 获取数据库中sessionId为sessionId的会话
     ds = db.filter("session", sessionId=sessionId)
     currentTime=time.time()  #当前时间
-    delTime=int(currentTime)+60*60  #删除时间
+    delTime=int(currentTime)+60*60*24  #删除时间
     if len(ds) == 0:  # 如果还没有会话
         db.create("session", sessionId=sessionId, value=jdata, delTime=delTime)  # 创建
     else:  # 否则
@@ -39,7 +39,7 @@ def getSession(sessionId):
         d=ds[0]  #会话数据
         currentTime=time.time()  #当前时间
         if d.delTime>currentTime:
-            d.delTime=currentTime+60*60
+            d.delTime=currentTime+60*60*24
             #返回,并把其中的"%"替换为双引号
             return json.loads(ds[0].value.replace("%", "\""))
         else:
