@@ -109,7 +109,7 @@ export default {
           this.alert(
             "验证码错误,你确定你不是机器人吗?(不是可以重新获取并填写)"
           );
-        } else if (response.data.message == "faild") {
+        } else if (response.data.message == "failed") {
           this.alert("检查一下,用户名或密码填错了呢!");
         } else if (response.data.message == "success") {
           this.success=true;
